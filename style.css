@@ -120,6 +120,7 @@ select {
   outline: none;
 }
 select option { background: #151922; }
+select optgroup { background: #151922; color: #8d95a3; font-style: normal; }
 
 .seg {
   display: flex; flex: 1;

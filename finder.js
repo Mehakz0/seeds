@@ -2,17 +2,27 @@
 // reports matches. The page stops it by terminating the worker.
 
 let mod = null;
+let modEdition = '';
 async function engine(edition) {
-  if (!mod) mod = await (await import(edition === 'bedrock' ? './cubiomes-bedrock.mjs' : './cubiomes.mjs')).default();
+  edition = edition === 'bedrock' ? 'bedrock' : 'java';
+  if (!mod || modEdition !== edition) {
+    mod = await (await import(edition === 'bedrock' ? './cubiomes-bedrock.mjs' : './cubiomes.mjs')).default();
+    modEdition = edition;
+  }
   return mod;
 }
+
+// Bedrock's StructureType enum differs from Java's (see worker.js).
+const BEDROCK_STRUCT = { 16: 19, 17: 20, 18: 22, 19: 23, 20: 24, 21: 25, 23: 27, 24: 28 };
+const engineStruct = (t) => modEdition === 'bedrock' ? (BEDROCK_STRUCT[t] ?? t) : t;
 
 const BATCH_MS = 120; // report progress about this often
 
 self.onmessage = async ({ data: { mc, conds, fromSpawn, start, stride, block, edition } }) => {
   const mod = await engine(edition);
   // Packed as [kind, id, radius, count, extra] per condition (see sm_find).
-  const flat = conds.flatMap((c) => [c.kind, c.id, c.radius, c.count ?? 1, c.extra ?? 0]);
+  // Kinds 1 (struct) and 3 (cluster) carry structure IDs -> translate for Bedrock.
+  const flat = conds.flatMap((c) => [c.kind, (c.kind === 1 || c.kind === 3) ? engineStruct(c.id) : c.id, c.radius, c.count ?? 1, c.extra ?? 0]);
   const cp = mod._malloc(flat.length * 4);
   mod.HEAP32.set(flat, cp >> 2);
 

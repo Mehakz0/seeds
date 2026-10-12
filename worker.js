@@ -8,6 +8,12 @@ const CACHE_V = 6;        // bump when tile output changes, to ignore old cache 
 let mod = null, modEdition = '';
 let current = '';
 
+// Bedrock's StructureType enum differs from Java's for Nether/End structures
+// (and Desert Well/Geode). The app always speaks Java IDs; translate at the
+// engine boundary so results echo back the requested (Java) ID.
+const BEDROCK_STRUCT = { 16: 19, 17: 20, 18: 22, 19: 23, 20: 24, 21: 25, 23: 27, 24: 28 };
+const engineStruct = (t) => modEdition === 'bedrock' ? (BEDROCK_STRUCT[t] ?? t) : t;
+
 // Load the Java or Bedrock engine on demand; both expose identical sm_* exports.
 async function ensureEngine(edition) {
   edition = edition === 'bedrock' ? 'bedrock' : 'java';
@@ -199,10 +205,11 @@ async function structs({ tx, tz, bpp, types, mc, seed, dim, edition }) {
       const n = mod._sm_end_islands(x0, z0, x0 + span - 1, z0 + span - 1), o = out();
       for (let i = 0; i < n; i++) found.push({ t, x: mod.HEAP32[o + i * 3], z: mod.HEAP32[o + i * 3 + 1], r: mod.HEAP32[o + i * 3 + 2] });
     } else {
-      const n = mod._sm_structures(t, x0, z0, x0 + span - 1, z0 + span - 1);
+      const et = engineStruct(t);
+      const n = mod._sm_structures(et, x0, z0, x0 + span - 1, z0 + span - 1);
       for (const [x, z] of pairs(n)) found.push({ t, x, z });
       // End cities: note which have a ship (the elytra).
-      if (t === 20) for (const f of found) { mod._sm_variant(20, f.x, f.z); f.ship = mod.HEAP32[out() + 8] === 1; }
+      if (t === 20) for (const f of found) { mod._sm_variant(et, f.x, f.z); f.ship = mod.HEAP32[out() + 8] === 1; }
     }
     byType[t] = found;
     cachePut(key, { found });
@@ -212,7 +219,7 @@ async function structs({ tx, tz, bpp, types, mc, seed, dim, edition }) {
 
 // Variant details for one structure (see sm_variant in api.c).
 function variant({ type, x, z }) {
-  mod._sm_variant(type, x, z);
+  mod._sm_variant(engineStruct(type), x, z);
   const o = out(), v = [...mod.HEAP32.subarray(o, o + 9)];
   return { biome: v[0], abandoned: !!v[1], start: v[2], giant: !!v[3], underground: !!v[4], basement: !!v[5], size: v[6], cracked: !!v[7], ship: !!v[8] };
 }
@@ -322,7 +329,7 @@ function mesh({ x, z, n, s, structs: types }) {
 
   const found = [];
   for (const t of types) {
-    const c = mod._sm_structures(t, x0, z0, x0 + n * s - 1, z0 + n * s - 1);
+    const c = mod._sm_structures(engineStruct(t), x0, z0, x0 + n * s - 1, z0 + n * s - 1);
     for (const [px, pz] of pairs(c)) found.push({ t, x: px, z: pz });
   }
   return {

@@ -952,7 +952,9 @@ function syncSegs() {
   for (const b of document.querySelectorAll('#dims button')) check(b, +b.dataset.dim === settings.dim);
   for (const b of document.querySelectorAll('#modes button')) {
     check(b, b.dataset.mode === settings.mode);
-    b.disabled = b.dataset.mode === '3d' && (settings.dim !== 0 || settings.mc < 22);
+    // 3D needs modern terrain: Java 1.18+ (mc 22), Bedrock 1.18+ (mc 20).
+    const min3d = bedrock() ? 20 : 22;
+    b.disabled = b.dataset.mode === '3d' && (settings.dim !== 0 || settings.mc < min3d);
     b.title = b.disabled ? 'Overworld only' : '';
   }
   document.body.classList.toggle('mode-3d', settings.mode === '3d');
