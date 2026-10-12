@@ -4,14 +4,14 @@
   font-style: normal;
   font-weight: 400 700;
   font-display: swap;
-  src: url(fonts/inter-latin.woff2) format('woff2');
+  src: url(inter-latin.woff2) format('woff2');
 }
 @font-face {
   font-family: "JetBrains Mono";
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url(fonts/jetbrains-mono-500-latin.woff2) format('woff2');
+  src: url(jetbrains-mono-500-latin.woff2) format('woff2');
 }
 
 :root {
@@ -120,7 +120,7 @@ select {
   outline: none;
 }
 select option { background: #151922; }
-select optgroup { background: #151922; color: #8d95a3; font-style: normal; }
+select option:disabled { color: #8d95a3; font-weight: 600; }
 
 .seg {
   display: flex; flex: 1;
