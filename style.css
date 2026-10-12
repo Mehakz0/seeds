@@ -198,6 +198,8 @@ button:focus-visible, select:focus-visible, #nearby li:focus-visible { outline: 
 }
 
 #modebar { top: 16px; right: 16px; display: flex; gap: 6px; padding: 6px; }
+/* Share menu must paint above the nearby card below it */
+#modebar:has(#share-menu:not([hidden])) { z-index: 15; }
 #modebar .seg { flex: none; }
 #modebar .seg button { padding: 6px 14px; }
 
