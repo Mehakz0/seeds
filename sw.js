@@ -1,7 +1,7 @@
 // Offline support. Site files are cache-first: VERSION is bumped on every
 // deploy, which creates a fresh cache and deletes the old one, so cached files
 // can never be stale. Repeat visits load instantly from cache.
-const VERSION = 'msf-final-v1';
+const VERSION = 'msf-final-v2';
 
 const CORE = ['./', 'style.css', 'app.js', 'icons.js', 'finder-ui.js', 'view3d.js',
   'worker.js', 'finder.js', 'cubiomes.mjs', 'cubiomes.wasm',
