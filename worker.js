@@ -1,13 +1,24 @@
 // Generation worker: owns one cubiomes instance and renders map tiles.
-import createModule from './cubiomes.mjs';
 import { PALETTES, hexRGB } from './palette.js';
 
 const TILE = 256;
 const SEA = 63;
 const END_ISLANDS = 1000; // pseudo structure type for small End islands
-const CACHE_V = 5;        // bump when tile output changes, to ignore old cache entries
-const mod = await createModule();
+const CACHE_V = 6;        // bump when tile output changes, to ignore old cache entries
+let mod = null, modEdition = '';
 let current = '';
+
+// Load the Java or Bedrock engine on demand; both expose identical sm_* exports.
+async function ensureEngine(edition) {
+  edition = edition === 'bedrock' ? 'bedrock' : 'java';
+  if (mod && modEdition === edition) return;
+  const m = edition === 'bedrock'
+    ? await import('./cubiomes-bedrock.mjs')
+    : await import('./cubiomes.mjs');
+  mod = await m.default();
+  modEdition = edition;
+  current = ''; // force re-init on the new engine
+}
 
 // ---------- tile cache (IndexedDB) ----------
 // Generated tiles are kept between visits so returning to a seed is instant.
@@ -65,10 +76,13 @@ function usePalette(name) {
   palette = name;
 }
 
-function init(mc, seed, dim) {
-  const key = `${mc}|${seed}|${dim}`;
+async function init(edition, mc, seed, dim) {
+  await ensureEngine(edition);
+  // Bedrock seeds are 32-bit; mask anything larger.
+  const s = modEdition === 'bedrock' ? BigInt(seed) & 0xffffffffn : BigInt(seed);
+  const key = `${modEdition}|${mc}|${s}|${dim}`;
   if (key === current) return;
-  mod._sm_init(mc, BigInt(seed), dim);
+  mod._sm_init(mc, s, dim);
   current = key;
 }
 
@@ -127,8 +141,8 @@ function shade(rgba, hs, cells, s) {
 
 // Biome image (+ biome ids and slime chunks) for one tile. `y` is a block
 // height for an underground slice, or null for the surface.
-async function tile({ tx, tz, bpp, relief, y, mc, seed, dim }) {
-  const key = `b|${CACHE_V}|${mc}|${seed}|${dim}|${relief ? 1 : 0}|${y ?? 's'}|${palette}|${bpp}|${tx}|${tz}`;
+async function tile({ tx, tz, bpp, relief, y, mc, seed, dim, edition }) {
+  const key = `b|${CACHE_V}|${edition}|${mc}|${seed}|${dim}|${relief ? 1 : 0}|${y ?? 's'}|${palette}|${bpp}|${tx}|${tz}`;
   const hit = await cacheGet(key);
   if (hit) {
     try { return { bitmap: await createImageBitmap(hit.png), ids: hit.ids, cells: hit.cells, slime: hit.slime }; }
@@ -173,11 +187,11 @@ async function tile({ tx, tz, bpp, relief, y, mc, seed, dim }) {
 }
 
 // Structure positions of the given types within one tile, per type.
-async function structs({ tx, tz, bpp, types, mc, seed, dim }) {
+async function structs({ tx, tz, bpp, types, mc, seed, dim, edition }) {
   const span = TILE * bpp, x0 = tx * span, z0 = tz * span;
   const byType = {};
   for (const t of types) {
-    const key = `s|${CACHE_V}|${mc}|${seed}|${dim}|${t}|${bpp}|${tx}|${tz}`;
+    const key = `s|${CACHE_V}|${edition}|${mc}|${seed}|${dim}|${t}|${bpp}|${tx}|${tz}`;
     const hit = await cacheGet(key);
     if (hit) { byType[t] = hit.found; continue; }
     const found = [];
@@ -335,10 +349,10 @@ function world({ dim, mc }) {
 }
 
 self.onmessage = async ({ data }) => {
-  const { id, kind, mc, seed, dim } = data;
+  const { id, kind, mc, seed, dim, edition } = data;
   try {
     if (kind === 'prune') { await prune(); self.postMessage({ id }); return; }
-    init(mc, seed, dim);
+    await init(edition, mc, seed, dim);
     usePalette(data.palette ?? 'classic');
     if (kind === 'tile') {
       const r = await tile(data);

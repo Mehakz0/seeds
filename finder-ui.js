@@ -5,7 +5,7 @@ const MAX_RESULTS = 100;
 const BLOCK = 1 << 20; // seeds per worker before jumping ahead by the pool stride
 const KIND = { struct: 1, biome: 2, cluster: 3, spawnBiome: 4 };
 
-export function initFinder({ structs, biomes, mc, parseSeed, randomSeed, open, pretty }) {
+export function initFinder({ structs, biomes, mc, edition, parseSeed, randomSeed, open, pretty }) {
   const $ = (id) => document.getElementById(id);
   const panel = $('finder'), condsBox = $('conds'), runBtn = $('find-run');
   const stats = $('find-stats'), results = $('find-results');
@@ -135,7 +135,7 @@ export function initFinder({ structs, biomes, mc, parseSeed, randomSeed, open, p
       const w = new Worker('finder.js', { type: 'module' });
       w.onmessage = ({ data }) => {
         if (data.ready) {
-          w.postMessage({ mc: mc(), conds: list, fromSpawn, start: BigInt.asUintN(64, base + BigInt(k * BLOCK)).toString(), stride: W * BLOCK, block: BLOCK });
+          w.postMessage({ mc: mc(), edition: edition(), conds: list, fromSpawn, start: BigInt.asUintN(64, base + BigInt(k * BLOCK)).toString(), stride: W * BLOCK, block: BLOCK });
           return;
         }
         checked += data.checked;

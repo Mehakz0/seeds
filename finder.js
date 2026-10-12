@@ -1,11 +1,16 @@
 // Seed-finder worker: scans a stream of seeds against the conditions and
 // reports matches. The page stops it by terminating the worker.
-import createModule from './cubiomes.mjs';
 
-const mod = await createModule();
+let mod = null;
+async function engine(edition) {
+  if (!mod) mod = await (await import(edition === 'bedrock' ? './cubiomes-bedrock.mjs' : './cubiomes.mjs')).default();
+  return mod;
+}
+
 const BATCH_MS = 120; // report progress about this often
 
-self.onmessage = ({ data: { mc, conds, fromSpawn, start, stride, block } }) => {
+self.onmessage = async ({ data: { mc, conds, fromSpawn, start, stride, block, edition } }) => {
+  const mod = await engine(edition);
   // Packed as [kind, id, radius, count, extra] per condition (see sm_find).
   const flat = conds.flatMap((c) => [c.kind, c.id, c.radius, c.count ?? 1, c.extra ?? 0]);
   const cp = mod._malloc(flat.length * 4);

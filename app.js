@@ -109,7 +109,7 @@ function send(slot, msg, cb) {
   slot.busy = true;
   slot.job = id;
   waiting.set(id, cb);
-  slot.w.postMessage({ ...msg, id, mc: settings.mc, seed: settings.seed, dim: settings.dim });
+  slot.w.postMessage({ ...msg, id, mc: settings.mc, seed: settings.seed, dim: settings.dim, edition: settings.edition });
 }
 
 function pump() {
@@ -196,7 +196,6 @@ function visibleKeys() {
 
 // Structure types to compute at this zoom: only layers that are switched on.
 function structsFor(bpp) {
-  if (bedrock()) return [];
   return STRUCTS.filter((s) => s.dim === settings.dim && bpp <= s.maxBpp && on.has(`s${s.id}`)).map((s) => s.id);
 }
 
@@ -307,7 +306,7 @@ function render() {
       if (st) { st.used = now; sshown.push(st); }
     }
 
-  if (on.has('slime') && settings.dim === 0 && !bedrock() && view.ppb >= 0.5) drawSlime(shown);
+  if (on.has('slime') && settings.dim === 0 && view.ppb >= 0.5) drawSlime(shown);
   if (on.has('grid')) drawGrid(w, h);
   if (on.has('density')) drawDensity(sshown, w, h);
   if (on.has(`s${ISLANDS}`) && settings.dim === 1) drawIslands(sshown);
@@ -433,7 +432,7 @@ function allMarkers(source) {
         seen.add(id);
         list.push({ kind: s, name: f.ship ? `${s.name} (ship)` : s.name, x: f.x, z: f.z, type: f.t });
       }
-  if (settings.dim === 0 && !bedrock()) {
+  if (settings.dim === 0) {
     if (on.has('strongholds'))
       strongholds.forEach(([x, z], i) => list.push({ kind: STRONGHOLD, name: `Stronghold #${i + 1}`, x, z }));
     if (on.has('spawn') && world?.spawn) list.push({ kind: SPAWN, name: 'World spawn', x: world.spawn[0], z: world.spawn[1] });
@@ -496,7 +495,7 @@ function regenerate() {
   request();
   if (settings.mode === '3d') enter3D();
   oneOff({ kind: 'world', dim: settings.dim }, (r) => { world = r; nearbySig = ''; legendSig = ''; fillLocate(); draw(); finder.refresh(); });
-  if (settings.dim === 0 && !bedrock())
+  if (settings.dim === 0)
     oneOff({ kind: 'strongholds' }, (r) => { strongholds = r.strongholds; nearbySig = ''; draw(); });
   draw();
   saveHash();
@@ -527,14 +526,6 @@ function buildLayers() {
     if (!els.length) return;
     box.append(Object.assign(document.createElement('div'), { className: 'group', textContent: title }), ...els);
   };
-  if (bedrock()) {
-    box.append(Object.assign(document.createElement('p'), {
-      className: 'note',
-      textContent: 'Bedrock uses the same biomes as Java for a seed, but places structures, spawn and slime chunks differently. Only biomes and terrain are shown.',
-    }));
-    group('World', EXTRA.filter((e) => e.key === 'grid').map((e) => add(e.key, e)));
-    return;
-  }
   group('World', EXTRA.filter((e) => e.dim === null || e.dim === settings.dim).map((e) => add(e.key, e)));
   group('Structures', STRUCTS.filter((s) => s.dim === settings.dim).map((s) => add(`s${s.id}`, s)));
 }
@@ -597,9 +588,9 @@ function saveHash() {
     l: [...on].join('.'),
   });
   if (settings.size !== 4) p.set('s', settings.size);
+  if (bedrock()) p.set('v', 'b' + settings.mc);
   if (settings.y != null) p.set('y', settings.y);
   if (settings.palette !== 'classic') p.set('p', settings.palette);
-  if (bedrock()) p.set('e', 'bedrock');
   if (settings.embed) p.set('embed', 1);
   if (settings.sync) p.set('sync', 1);
   if (waypoints.length)
@@ -618,8 +609,15 @@ function loadHash() {
   setSeedText(seedText);
   // Links can be hand-edited; ignore anything that isn't valid.
   const num = (k) => (p.has(k) && Number.isFinite(+p.get(k)) ? +p.get(k) : null);
-  const versions = [...$('version').options].map((o) => +o.value).filter(Number.isFinite);
-  if (versions.includes(num('v'))) settings.mc = num('v');
+  const versions = [...$('version').options].map((o) => o.value);
+  const vraw = p.get('v');
+  if (vraw && versions.includes(vraw)) {
+    if (vraw[0] === 'b') { settings.edition = 'bedrock'; settings.mc = +vraw.slice(1); }
+    else { settings.edition = 'java'; settings.mc = +vraw; }
+  } else if (p.get('e') === 'bedrock') {
+    // Legacy link from the old biomes-only Bedrock mode: map to latest real Bedrock.
+    settings.edition = 'bedrock'; settings.mc = 30;
+  }
   if ([-1, 0, 1].includes(num('d'))) settings.dim = num('d');
   if (['map', 'relief', '3d'].includes(p.get('m'))) settings.mode = p.get('m');
   const LIMIT = 30_000_000;
@@ -629,7 +627,6 @@ function loadHash() {
   if ([4, 8, 16].includes(num('s'))) settings.size = num('s');
   if (num('y') !== null) settings.y = Math.max(-64, Math.min(320, Math.round(num('y'))));
   if (['classic', 'natural'].includes(p.get('p'))) settings.palette = p.get('p');
-  if (p.get('e') === 'bedrock') settings.edition = 'bedrock';
   settings.embed = p.get('embed') === '1';
   settings.sync = settings.embed && p.get('sync') === '1';
   waypoints = (p.get('w') ?? '').split('|').filter(Boolean).slice(0, 100).flatMap((part) => {
@@ -646,7 +643,7 @@ function loadHash() {
     EXTRA.filter((e) => e.on).forEach((e) => on.add(e.key));
     STRUCTS.filter((s) => s.on).forEach((s) => on.add(`s${s.id}`));
   }
-  $('version').value = bedrock() ? 'bedrock' : settings.mc;
+  $('version').value = bedrock() ? 'b' + settings.mc : settings.mc;
 }
 function setSeedText(t) {
   const seed = parseSeed(t) ?? parseSeed(randomSeed());
@@ -917,14 +914,17 @@ $('hintbar-x').onclick = () => { $('hintbar').hidden = true; dismissHint(); };
 // ---------- controls ----------
 $('seed').addEventListener('change', (e) => { setSeedText(e.target.value); hideSaved(); regenerate(); });
 $('random').onclick = () => { setSeedText(randomSeed()); regenerate(); };
-// `v` is a Java version id, or 'bedrock'. Caller regenerates.
+// `v` is a Java version id, or 'bN' for Bedrock (N = bedrock enum value). Caller regenerates.
 function setVersion(v) {
   $('version').value = v;
-  settings.edition = v === 'bedrock' ? 'bedrock' : 'java';
-  // Bedrock biomes match the newest Java version's for the same seed.
-  settings.mc = v === 'bedrock' ? 40 : +v;
+  if (v[0] === 'b') {
+    settings.edition = 'bedrock';
+    settings.mc = +v.slice(1);
+  } else {
+    settings.edition = 'java';
+    settings.mc = +v;
+  }
   finder.stop();
-  $('open-finder').disabled = bedrock();
   buildLayers();
 }
 $('version').onchange = (e) => { setVersion(e.target.value); regenerate(); };
@@ -1015,7 +1015,7 @@ async function enter3D({ keepCamera = false } = {}) {
     return;
   }
   if (req !== terrainReq || settings.mode !== '3d') return;
-  const structs = bedrock() ? [] : STRUCTS.filter((s) => s.dim === 0 && on.has(`s${s.id}`)).map((s) => s.id);
+  const structs = STRUCTS.filter((s) => s.dim === 0 && on.has(`s${s.id}`)).map((s) => s.id);
   oneOff({ kind: 'mesh', x: view.x, z: view.z, n: N3D, s: settings.size, structs }, (r) => {
     if (req !== terrainReq || settings.mode !== '3d') return;
     if (r.error) { $('hint3d').textContent = r.error; return; }
@@ -1085,8 +1085,8 @@ canvas.addEventListener('contextmenu', (e) => {
 });
 
 // ---------- saved seeds ----------
-const seedId = () => `${bedrock() ? 'b' : settings.mc}:${settings.seedText || signed(settings.seed)}`;
-const VERSION_NAME = () => (bedrock() ? 'Bedrock' : $('version').selectedOptions[0]?.text ?? '');
+const seedId = () => `${bedrock() ? 'b' + settings.mc : settings.mc}:${settings.seedText || signed(settings.seed)}`;
+const VERSION_NAME = () => ($('version').selectedOptions[0]?.text ?? '');
 function syncSaveButton() {
   const saved = savedSeeds().some((x) => x.id === seedId());
   const b = $('save-seed');
@@ -1111,7 +1111,6 @@ function openHash(hash) {
   history.replaceState(null, '', '#' + hash);
   loadHash();
   syncSegs(); buildLayers(); buildViewOptions(); syncSizes(); renderWaypoints();
-  $('open-finder').disabled = bedrock();
   if (was === '3d' && settings.mode !== '3d') setMode(settings.mode);
   regenerate();
 }
@@ -1236,6 +1235,7 @@ const finder = initFinder({
   structs: STRUCTS,
   biomes: () => (world?.overworld ?? []).map((id) => [id, world.names[id]]).sort((a, b) => a[1].localeCompare(b[1])),
   mc: () => settings.mc,
+  edition: () => settings.edition,
   parseSeed, randomSeed, pretty,
   open(seed, x, z, dim) {
     setSeedText(seed);
@@ -1314,7 +1314,7 @@ async function renderImage(W) {
   g.fillStyle = '#9cf27a';
   g.fillText('Minecraft Seed Finder', CAPTION * 0.5, H + CAPTION / 2);
   g.fillStyle = '#c9ced8';
-  const edition = bedrock() ? 'Bedrock' : $('version').selectedOptions[0].text;
+  const edition = $('version').selectedOptions[0].text;
   const cx = Math.round(view.x), cz = Math.round(view.z);
   g.fillText(`Seed ${settings.seedText || signed(settings.seed)}  ·  ${edition}  ·  ${DIM_LABEL[settings.dim]}  ·  centre ${cx}, ${cz}`,
     CAPTION * 0.5 + g.measureText('Minecraft Seed Finder').width + CAPTION * 0.6, H + CAPTION / 2);
@@ -1541,7 +1541,6 @@ setupEmbed();
 syncSegs();
 buildLayers();
 buildViewOptions();
-$('open-finder').disabled = bedrock();
 syncSizes();
 renderWaypoints();
 resize();

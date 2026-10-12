@@ -1,12 +1,13 @@
 // Offline support. Site files are network-first (so a deploy is never mixed
 // with stale files), with the cache as the offline fallback. Bump VERSION when
 // the file list changes, to drop old caches.
-const VERSION = 'msf-v2';
+const VERSION = 'msf-v3';
 
 const CORE = ['./', 'style.css', 'app.js', 'icons.js', 'finder-ui.js', 'view3d.js',
   'worker.js', 'finder.js', 'cubiomes.mjs', 'cubiomes.wasm',
-  'three.module.min.js', 'OrbitControls.js', 'palette.js', 'tools.js',
-  'inter-latin.woff2', 'jetbrains-mono-500-latin.woff2', 'waypoints-io.js', 'commands.js',
+  'cubiomes-bedrock.mjs', 'cubiomes-bedrock.wasm',
+  'vendor/three/three.module.min.js', 'vendor/three/OrbitControls.js', 'palette.js', 'tools.js',
+  'fonts/inter-latin.woff2', 'fonts/jetbrains-mono-500-latin.woff2', 'waypoints-io.js', 'commands.js',
   'seed.js', 'saved.js'];
 
 self.addEventListener('install', (e) => {

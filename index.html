@@ -14,13 +14,13 @@
   <meta name="twitter:card" content="summary_large_image">
   <link rel="canonical" href="https://minecraftseedfinder.com/seed-map/">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%239cf27a'/%3E%3Cstop offset='1' stop-color='%2354e0d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='5' y='5' width='14' height='14' rx='3.5' transform='rotate(45 12 12)' fill='url(%23g)'/%3E%3C/svg%3E">
-  <link rel="preload" href="inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
   <script type="importmap">
     {
       "imports": {
-        "three": "./three.module.min.js",
-        "three/addons/controls/OrbitControls.js": "./OrbitControls.js"
+        "three": "./vendor/three/three.module.min.js",
+        "three/addons/controls/OrbitControls.js": "./vendor/three/OrbitControls.js"
       }
     }
   </script>
@@ -43,6 +43,7 @@
         <ol id="saved-list"></ol>
       </div>
       <select id="version" aria-label="Version">
+        <optgroup label="Java Edition">
         <option value="40">26.3 (Latest)</option>
         <option value="39">26.2</option>
         <option value="36">26.1</option>
@@ -57,7 +58,48 @@
         <option value="22">1.18</option>
         <option value="21">1.17</option>
         <option value="20">1.16</option>
-        <option value="bedrock">Bedrock (biomes)</option>
+        <option value="18">1.15</option>
+        <option value="17">1.14</option>
+        <option value="16">1.13</option>
+        <option value="15">1.12</option>
+        <option value="14">1.11</option>
+        <option value="13">1.10</option>
+        <option value="12">1.9</option>
+        <option value="11">1.8</option>
+        <option value="10">1.7</option>
+        </optgroup>
+        <optgroup label="Bedrock Edition">
+        <option value="b30">Bedrock 26.60 (Latest)</option>
+        <option value="b29">Bedrock 26.50</option>
+        <option value="b28">Bedrock 26.40</option>
+        <option value="b27">Bedrock 26.30</option>
+        <option value="b26">Bedrock 26.20</option>
+        <option value="b25">Bedrock 1.21.60</option>
+        <option value="b24">Bedrock 1.21.50</option>
+        <option value="b23">Bedrock 1.21</option>
+        <option value="b22">Bedrock 1.20</option>
+        <option value="b21">Bedrock 1.19</option>
+        <option value="b20">Bedrock 1.18</option>
+        <option value="b19">Bedrock 1.17.30</option>
+        <option value="b18">Bedrock 1.17</option>
+        <option value="b17">Bedrock 1.16</option>
+        <option value="b16">Bedrock 1.14</option>
+        <option value="b15">Bedrock 1.13</option>
+        <option value="b14">Bedrock 1.12</option>
+        <option value="b13">Bedrock 1.11</option>
+        <option value="b12">Bedrock 1.10</option>
+        <option value="b11">Bedrock 1.9</option>
+        <option value="b10">Bedrock 1.8</option>
+        <option value="b9">Bedrock 1.7</option>
+        <option value="b8">Bedrock 1.6</option>
+        <option value="b7">Bedrock 1.5</option>
+        <option value="b6">Bedrock 1.4</option>
+        <option value="b5">Bedrock 1.2</option>
+        <option value="b4">Bedrock 1.1</option>
+        <option value="b3">Bedrock 1.0</option>
+        <option value="b2">Bedrock Beta 1.8</option>
+        <option value="b1">Bedrock Beta 1.7</option>
+        </optgroup>
       </select>
       <button id="save-seed" class="ghost" title="Save this seed" aria-label="Save this seed" aria-pressed="false"></button>
       <button id="random" class="ghost" title="Random seed" aria-label="Random seed">
